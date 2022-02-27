@@ -73,20 +73,20 @@ class Region:
 
 class MmuConfig:
 
-    def __init__(self, pgt_config):
+    def __init__(self, pgt_conf):
 
-        self.pgt_config = pgt_config
+        self.pgt_conf = pgt_conf
         """
         Tables occupy one granule and each entry is a 64-bit descriptor.
         """
-        self.entries_per_table = pgt_config.tg // 8
+        self.entries_per_table = pgt_conf.tg // 8
         #log.debug(f"{entries_per_table=}")
 
 
         """
         Number of bits required to index each byte in a granule sized page.
         """
-        self.block_offset_bits = int(math.log(pgt_config.tg, 2))
+        self.block_offset_bits = int(math.log(pgt_conf.tg, 2))
         #log.debug(f"{block_offset_bits=}")
 
 
@@ -101,9 +101,9 @@ class MmuConfig:
         """
         Starting level of translation.
         """
-        start_level = 3 - (args.tsz - block_offset_bits) // table_idx_bits
-        if (args.tsz - block_offset_bits) % table_idx_bits == 0:
-            start_level = start_level + 1
+        self.start_level = 3 - (pgt_conf.tsz - self.block_offset_bits) // self.table_idx_bits
+        if (pgt_conf.tsz - self.block_offset_bits) % self.table_idx_bits == 0:
+            self.start_level += 1
             #log.debug(f"start_level corrected as {args.tsz=} exactly fits in first table")
         #log.debug(f"{start_level=}")
 
@@ -114,28 +114,28 @@ class MmuConfig:
         self.mair_encodes = {i.name: i.value for i in MairEncode}
 
         self.mair = self._mair()
-        self.ttbr = pgt_config.ttbr
+        self.ttbr = pgt_conf.ttbr
 
     def _mair(self):
         mair = 0
-        for k in mair_encodes.keys():
-            mair |= (mair_encodes[k] << (memory_types[k] * 8)
+        for k in self.mair_encodes.keys():
+            mair |= (self.mair_encodes[k] << (self.mem_types[k] * 8))
         return mair
 
     def _tcr(self) -> str:
         """
         Generate required value for TCR_ELn.
         """
-        reg = Register(f"tcr_el{args.el}")
+        reg = Register(f"tcr_el{self.pgt_conf.el}")
 
         """
         Configurable bitfields present at all exception levels.
         """
-        reg.field( 5,  0, "t0sz", 64-args.tsz)
+        reg.field( 5,  0, "t0sz", 64-self.pgt_conf.tsz)
         reg.field( 9,  8, "irgn0", 1)  # Normal WB RAWA
         reg.field(11, 10, "orgn0", 1)  # Normal WB RAWA
         reg.field(13, 12, "sh0", 3)    # Inner Shareable
-        reg.field(15, 14, "tg0", {"4K":0, "16K":2, "64K":1}[args.tg_str])
+        reg.field(15, 14, "tg0", {"4K":0, "16K":2, "64K":1}[self.pgt_conf.tg_str])
 
         """
         Bits that are RES1 at all exception levels.
@@ -145,8 +145,8 @@ class MmuConfig:
         """
         Exception level specific differences.
         """
-        ps_val = {32:0, 36:1, 40:2, 48:5}[args.tsz]
-        if args.el == 1:
+        ps_val = {32:0, 36:1, 40:2, 48:5}[self.pgt_conf.tsz]
+        if self.pgt_conf.el == 1:
             reg.field(34, 32, "ps", ps_val)
         else:
             reg.field(18, 16, "ps", ps_val)
@@ -159,7 +159,7 @@ class MmuConfig:
         """
         Generate required value for SCTLR_ELn.
         """
-        reg = Register(f"sctlr_el{args.el}")
+        reg = Register(f"sctlr_el{self.pgt_conf.el}")
 
         """
         Configurable bitfields present at all exception levels.
@@ -170,8 +170,6 @@ class MmuConfig:
 
 
         return hex(reg.value())
-
-    sctlr = _sctlr(self)
 
 
     def _template_block_page(self, mem_type, mem_attr, is_page:bool ):
@@ -196,7 +194,7 @@ class MmuConfig:
         return _template_block_page(mem_type, mem_attr, is_page=False)
 
 
-    def page_template( memory_type:mmap.MEMORY_TYPE):
+    def page_template(self, mem_type, mem_attr):
         return _template_block_page(mem_type, mem_attr, is_page=True)
 
 

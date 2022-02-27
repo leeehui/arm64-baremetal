@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 # Standard Python deps
 from dataclasses import dataclass
 from typing import List
+import logging
 
 # Internal deps
 
@@ -52,7 +53,7 @@ class Table:
         if not idx in self.entries:
             self.entries[idx] = Table(
                 self.level + 1,
-                self.mmu_conf
+                self.mmu_conf,
                 va_base if not va_base is None else (self.va_base + idx * self.chunk)
             )
 
@@ -61,11 +62,11 @@ class Table:
         """
         Map a region of memory in this translation table.
         """
-        log.debug()
-        log.debug(f"mapping region {hex(region.addr)} in level {self.level} table")
-        log.debug(region)
-        assert(region.addr >= self.va_base)
-        assert(region.addr + region.size <= self.va_base + self.mmu_conf.entries_per_table * self.chunk)
+        margin = " " * (self.level - self.mmu_conf.start_level + 1) * 8
+
+        logging.debug(margin + f"mapping region {hex(region.va)} in level {self.level} table")
+        assert(region.va >= self.va_base)
+        assert(region.va + region.size <= self.va_base + self.mmu_conf.entries_per_table * self.chunk)
 
         """
         Calculate number of chunks required to map this region.
@@ -90,7 +91,7 @@ class Table:
                     +--------------------+
         """
         if num_chunks == 0:
-            log.debug(f"floating region, dispatching to next-level table")
+            logging.debug(margin + f"floating region, dispatching to next-level table")
             self.prepare_next(start_idx)
             self.entries[start_idx].map(region)
             return
@@ -111,7 +112,7 @@ class Table:
         """
         underflow = region.va % self.chunk
         if underflow:
-            log.debug(f"{underflow=}, dispatching to next-level table")
+            logging.debug(margin + f"{underflow=}, dispatching to next-level table")
             delta = self.chunk - underflow
             self.prepare_next(start_idx)
             self.entries[start_idx].map(region.copy(size = delta))
@@ -134,9 +135,9 @@ class Table:
                  \\ |####################|
                     +--------------------+
         """
-        overflow = (region.addr + region.length) % self.chunk
+        overflow = end_va % self.chunk
         if overflow:
-            log.debug(f"{overflow=}, dispatching to next-level table")
+            logging.debug(margin + f"{overflow=}, dispatching to next-level table")
             final_idx = (end_va >> entry_idx_shift) & self.mmu_conf.table_idx_mask
             va_base = (end_va // self.chunk) * self.chunk
             pa_base = end_pa - (end_va - va_base)
@@ -149,11 +150,11 @@ class Table:
         Handle any remaining complete chunks.
         """
         region.size = self.chunk
-        can_split_level_min = (1 if args.tg_str == "4K" else 2)
-        can_split = ((self.leve >= can_split_level_min) and self.level < 3) and (not self.pgt_conf.large_page)
+        can_split_level_min = (1 if self.pgt_conf.tg_str == "4K" else 2)
+        can_split = ((self.level >= can_split_level_min) and self.level < 3) and (not self.pgt_conf.large_page)
         num_contiguous_blocks = 0
         for i in range(start_idx, start_idx + num_chunks):
-            log.debug(f"mapping complete chunk at index {i}")
+            logging.debug(margin + f"mapping complete chunk at index {i}")
             va_base = self.va_base + i * self.chunk
             pa_base = region.pa + (i - start_idx) * self.chunk
             r = region.copy(va=va_base, pa=pa_base)
@@ -171,7 +172,7 @@ class Table:
         """
         Recursively crawl this table to generate a pretty-printable string.
         """
-        margin = " " * (self.level - mmu.start_level + 1) * 8
+        margin = " " * (self.level - self.mmu_conf.start_level + 1) * 8
         string = f"{margin}level {self.level} table @ {hex(self.addr)}\n"
         for k in sorted(list(self.entries.keys())):
             entry = self.entries[k]
@@ -181,36 +182,32 @@ class Table:
                 hyphens = "-" * (len(nested_table.splitlines()[0]) - len(header))
                 string += f"{header}" + hyphens + f"\\\n{nested_table}"
             else:
-                if entry.memory_type == mmap.MEMORY_TYPE.rw_data:
-                    memtype = "RW_Data"
-                elif entry.memory_type == mmap.MEMORY_TYPE.device:
-                    memtype = "Device"
-                else:
-                    memtype = "Code"
-                string += "{}[#{:>4}] 0x{:>012}-0x{:>012}, {}, {}\n".format(
+                string += "{}[#{:>4}] 0x{:>012x}-0x{:>012x}, 0x{:>012x}-0x{:>012x}, {}, {}\n".format(
                     margin,
                     k,
-                    hex(entry.addr)[2:],
-                    hex(entry.addr + entry.length - 1)[2:],
-                    memtype,
+                    entry.va,
+                    entry.va + entry.size - 1,
+                    entry.pa,
+                    entry.pa + entry.size - 1,
+                    entry.mem_type,
                     entry.label
                 )
         return string
 
 
-    @classmethod
-    def usage( cls ) -> str:
-        """
-        Generate memory allocation usage information for the user.
-        """
-        string  = f"This memory map requires a total of {len(cls._allocated)} translation tables.\n"
-        string += f"Each table occupies {args.tg_str} of memory ({hex(args.tg)} bytes).\n"
-        string += f"The buffer pointed to by {hex(args.ttb)} must therefore be {len(cls._allocated)}x {args.tg_str} = {hex(args.tg * len(cls._allocated))} bytes long."
-        return string
+    #@classmethod
+    #def usage( cls ) -> str:
+    #    """
+    #    Generate memory allocation usage information for the user.
+    #    """
+    #    string  = f"This memory map requires a total of {len(cls._allocated)} translation tables.\n"
+    #    string += f"Each table occupies {args.tg_str} of memory ({hex(args.tg)} bytes).\n"
+    #    string += f"The buffer pointed to by {hex(args.ttb)} must therefore be {len(cls._allocated)}x {args.tg_str} = {hex(args.tg * len(cls._allocated))} bytes long."
+    #    return string
 
     @classmethod
-    def gen(cls, level, pgt_conf, mmu_conf):
-        root = Table(level, pgt_conf, mmu_conf)
-        [root.map(r) for r in mmap.regions]
+    def gen(cls, level, mmu_conf):
+        root = Table(level, mmu_conf)
+        [root.map(r) for r in mmu_conf.pgt_conf.regions]
         return root
 
