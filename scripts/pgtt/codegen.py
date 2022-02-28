@@ -3,6 +3,7 @@ Copyright (c) 2019 Ash Wilding. All rights reserved.
 
 SPDX-License-Identifier: MIT
 """
+from struct import *
 
 # Internal deps
 from .mmu import *
@@ -121,26 +122,27 @@ class CodeGen:
                     keys.remove(idx)
         return string
 
+    def _fill_entry(self, table_idx, table, entry_idx_start, region, page_data, is_table_ptr=False):
+        entry_offset = table.addr - self.pgt_conf.ttbr
+        if type(entry) is Region:
+            for k in range(idx, idx+entry.num_contig):
+                keys.remove(k)
+        else:
+            self._fill_entry(n, idx, entry, page_data, is_table_ptr=True)
+            keys.remove(idx)
+
+
     def _mk_mem(self) :
         """
         Generate assembly to program all allocated translation tables.
         """
         page_data = bytearray()
         for n,t in enumerate(self.table._allocated):
-            string += self._mk_table(n, t)
             keys = sorted(list(t.entries.keys()))
             while keys:
                 idx = keys[0]
                 entry = t.entries[idx]
-                if type(entry) is Region:
-                    string += self._mk_blocks(n, t, idx, entry)
-                    for k in range(idx, idx+entry.num_contig):
-                        keys.remove(k)
-                else:
-                    string += self._mk_next_level_table(n, idx, entry)
-                    keys.remove(idx)
-        return string
-
+                self._fill_entry(n, t, idx, entry, page_data)
 
     def gen(self):
         _newline = "\n"
