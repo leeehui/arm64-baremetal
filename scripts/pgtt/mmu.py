@@ -48,6 +48,7 @@ class Region:
     size: int                    # length in bytes
     mem_type: MemType         # True for Device-nGnRnE, False for Normal WB RAWA
     mem_attr: MemAttr
+    is_page = True             # whether this region is page or not
     num_contig = 1
 
 
@@ -120,7 +121,7 @@ class MmuConfig:
         mair = 0
         for k in self.mair_encodes.keys():
             mair |= (self.mair_encodes[k] << (self.mem_types[k] * 8))
-        return mair
+        return hex(mair)
 
     def _tcr(self) -> str:
         """
@@ -172,7 +173,7 @@ class MmuConfig:
         return hex(reg.value())
 
 
-    def _template_block_page(self, mem_type, mem_attr, is_page:bool ):
+    def entry_template(self, mem_type, mem_attr, is_page:bool ):
         """
         Translation table entry fields common across all exception levels.
         """
@@ -189,14 +190,3 @@ class MmuConfig:
 
         return hex(pte.value())
 
-
-    def block_template(self, mem_type, mem_attr):
-        return _template_block_page(mem_type, mem_attr, is_page=False)
-
-
-    def page_template(self, mem_type, mem_attr):
-        return _template_block_page(mem_type, mem_attr, is_page=True)
-
-
-    def table_template(self):
-        return hex(0x3)

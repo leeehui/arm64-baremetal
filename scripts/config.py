@@ -6,6 +6,7 @@ import json
 
 from pgtt.mmu import *
 from pgtt.table import *
+from pgtt.codegen import *
 
 
 class PgtConfig:
@@ -99,3 +100,5 @@ for pgt_conf in conf.pgt_configs():
     mmu_conf = MmuConfig(pgt_conf)
     table = Table.gen(mmu_conf.start_level, mmu_conf)
     print(str(table))
+    coder = CodeGen(table)
+    print(coder.gen())

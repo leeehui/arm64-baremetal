@@ -6,11 +6,12 @@
             //
             "granule"           : "4K",
             "table_region_size" : 32,
-            "large_page"        : false,
+            "large_page"        : true,
             "maps"              : 
             [
                 {"va": "0x00000000", "pa": "0x10000000", "size": "4K", "type": "DEVICE_nGnRE", "attr": "wxs", "description": "UART0"},
-                {"va": "0x10100000", "pa": "0x00000000", "size": "1G", "type": "DEVICE_nGnRE", "attr": "wxs", "description": "UART0"}
+                {"va": "0x10100000", "pa": "0x00000000", "size": "1G", "type": "DEVICE_nGnRE", "attr": "wxs", "description": "UART0"},
+                {"va": "0x80100000", "pa": "0x00100000", "size": "1M", "type": "NORMAL",       "attr": "wxs", "description": "UART0"}
             ]
         }
     ]

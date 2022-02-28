@@ -162,6 +162,8 @@ class Table:
                 self.prepare_next(i)
                 self.entries[i].map(r)
             else:
+                if self.level < 3:
+                    r.is_page = False
                 self.entries[i] = r
             num_contiguous_blocks += 1
         if num_contiguous_blocks > 0:
