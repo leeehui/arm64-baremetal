@@ -184,7 +184,7 @@ class Table:
                 hyphens = "-" * (len(nested_table.splitlines()[0]) - len(header))
                 string += f"{header}" + hyphens + f"\\\n{nested_table}"
             else:
-                string += "{}[#{:>4}] 0x{:>012x}-0x{:>012x}, 0x{:>012x}-0x{:>012x}, {}, {}\n".format(
+                string += "{}[#{:>4}] 0x{:>012x}-0x{:>012x}, 0x{:>012x}-0x{:>012x}, {}, {}, {}\n".format(
                     margin,
                     k,
                     entry.va,
@@ -192,6 +192,7 @@ class Table:
                     entry.pa,
                     entry.pa + entry.size - 1,
                     entry.mem_type,
+                    "PAGE" if entry.is_page else "BLOCK",
                     entry.label
                 )
         return string

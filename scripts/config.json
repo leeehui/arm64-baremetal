@@ -1,10 +1,13 @@
 {
     "pagetables":   [
         {
-            "excepiton_level"   : [1],
+            // false: we will generate code that fills pagetables at runtime
+            // true : we will generate pagetable memory which will be loaded together with testcase
+            "gen_table_runtime" : false,
+            "excepiton_level"   : 1,
             "table_base_addr"   : "0x00000000",
             //
-            "granule"           : "4K",
+            "granule"           : "16K",
             "table_region_size" : 32,
             "large_page"        : true,
             "maps"              : 

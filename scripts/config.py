@@ -18,6 +18,7 @@ class PgtConfig:
         self.tg             = {"4K": 4*1024, "16K": 16*1024, "64K": 64*1024}[self.tg_str]
         self.tsz            = pgt["table_region_size"]
         self.large_page     = pgt["large_page"]
+        self.gen_code       = pgt["gen_table_runtime"]
 
         self.regions = []
         for idx, pgt_map in enumerate(pgt["maps"]):
