@@ -122,27 +122,40 @@ class CodeGen:
                     keys.remove(idx)
         return string
 
-    def _fill_entry(self, table_idx, table, entry_idx_start, region, page_data, is_table_ptr=False):
-        entry_offset = table.addr - self.pgt_conf.ttbr
+    def _fill_entry(self, table_idx, table, entry_idx, entry, page_mem_fd):
         if type(entry) is Region:
-            for k in range(idx, idx+entry.num_contig):
-                keys.remove(k)
+            for idx in range(table_idx, table_idx + entry.num_contig):
+                addr = entry.pa + idx * table.chunk + int(self.mmu_conf.entry_template(entry.mem_type, entry.mem_attr, entry.is_page), base=16)
+                data = pack("<Q", addr)
+                page_mem_fd.write(data)
+
         else:
-            self._fill_entry(n, idx, entry, page_data, is_table_ptr=True)
-            keys.remove(idx)
+            addr = (entry.addr | 0x3)
+            data = pack("<Q", addr )
+            page_mem_fd.write(data)
 
 
-    def _mk_mem(self) :
+
+    def _mk_mem(self, page_mem_file) :
         """
         Generate assembly to program all allocated translation tables.
         """
-        page_data = bytearray()
-        for n,t in enumerate(self.table._allocated):
-            keys = sorted(list(t.entries.keys()))
-            while keys:
-                idx = keys[0]
-                entry = t.entries[idx]
-                self._fill_entry(n, t, idx, entry, page_data)
+        #page_data = bytearray()
+        with open(page_mem_file, "wb") as page_mem_fd:
+            for n,t in enumerate(self.table._allocated):
+                keys = sorted(list(t.entries.keys()))
+                while keys:
+                    idx = keys[0]
+                    entry = t.entries[idx]
+                    if type(entry) is Region:
+                        self._fill_entry(n, t, idx, entry, page_mem_fd)
+                        for k in range(idx, idx+entry.num_contig):
+                            keys.remove(k)
+                    else:
+                        self._fill_entry(n, t, idx, entry, page_mem_fd)
+                        keys.remove(idx)
+
+        page_mem_fd.close()
 
     def gen(self):
         _newline = "\n"
@@ -244,6 +257,8 @@ class CodeGen:
                 comment = line[idx:]
                 line = f"{code}{' ' * (41 - len(code))}{comment}"
             output += f"{line}\n"
+
+        self._mk_mem("/home/bgb/arm64-baremetal/page")
 
         return output
 
