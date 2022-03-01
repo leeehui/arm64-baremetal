@@ -38,8 +38,9 @@ class Register:
         self.name = name
         self.fields = {}
         self.res1s = []
-        #log.debug()
-        #log.debug(f"{name}")
+        self.logger = logging.getLogger(type(self).__name__)
+        self.logger.setLevel(logging.ERROR)
+        self.logger.debug(f"{name}")
 
 
     def field( self, hi:int, lo:int, name:str, value:int ) -> None:
@@ -47,7 +48,7 @@ class Register:
         Add a bitfield to this system register.
         """
         self.fields[name] = Bitfield(hi, lo, value)
-        #log.debug(f"{self.name}.{name}={value}")
+        self.logger.debug(f"{self.name}.{name}={value}")
 
 
     def res1( self, pos:int ) -> None:
@@ -55,7 +56,7 @@ class Register:
         Add a RES1 bit to this system register.
         """
         self.res1s.append(Bitfield(pos, pos, 1))
-        #log.debug(f"{self.name}.res1[{pos}]=1")
+        self.logger.debug(f"{self.name}.res1[{pos}]=1")
 
 
     def value( self ) -> str:
@@ -65,5 +66,5 @@ class Register:
         val = 0
         for f in list(self.fields.values()) + self.res1s:
             val = val | f
-        #log.debug(f"{self.name}={hex(val)}")
+        self.logger.debug(f"{self.name}={hex(val)}")
         return val

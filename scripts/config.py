@@ -11,6 +11,9 @@ from pgtt.codegen import *
 
 class PgtConfig:
     def __init__(self, pgt):
+        self.logger         = logging.getLogger(type(self).__name__)
+        self.logger.setLevel(logging.ERROR)
+
         self.ttbr_str       = pgt["table_base_addr"]
         self.ttbr           = self.parse_addr(pgt["table_base_addr"])
         self.el             = pgt["excepiton_level"]
@@ -42,7 +45,7 @@ class PgtConfig:
         try:
             addr = int(s, base=(16 if s.startswith("0X") else 10))
         except ValueError:
-            logging.error(f"invalid config address {s}")
+            self.logger.error(f"invalid config address {s}")
         return addr
 
     def parse_size(self, s):
@@ -50,16 +53,16 @@ class PgtConfig:
         x = re.search(r"(\d+)([KMGT])", s)
         try:
             qty = x.group(1)
-            logging.debug(f"got qty: {qty}")
+            self.logger.debug(f"got qty: {qty}")
             unit = x.group(2)
-            logging.debug(f"got unit: {unit}")
+            self.logger.debug(f"got unit: {unit}")
         except AttributeError:
-            logging.error(f"invalid config size {s}")
+            self.logger.error(f"invalid config size {s}")
         return int(qty) * 1024 ** ("KMGT".find(unit) + 1)
 
     def parse_attr(self, s):
         if re.match(r"(?!!?w!?x!?s)", s):
-            logging.error(f"bad memory attr {s}")
+            self.logger.error(f"bad memory attr {s}")
             sys.exit(errno.EINVAL)
         # force enable EL0 access
         ap = 0b11 if re.search(r"!w", s) else 0b01

@@ -33,6 +33,8 @@ class Table:
                         base virtual address mapped by entry [0] in this table
 
         """
+        self.logger = logging.getLogger(type(self).__name__)
+        self.logger.setLevel(logging.ERROR)
         self.pgt_conf = mmu_conf.pgt_conf
         self.mmu_conf = mmu_conf
         self.addr = self.pgt_conf.ttbr + len(Table._allocated) * self.pgt_conf.tg
@@ -64,7 +66,7 @@ class Table:
         """
         margin = " " * (self.level - self.mmu_conf.start_level + 1) * 8
 
-        logging.debug(margin + f"mapping region {hex(region.va)} in level {self.level} table")
+        self.logger.debug(margin + f"mapping region {hex(region.va)} in level {self.level} table")
         assert(region.va >= self.va_base)
         assert(region.va + region.size <= self.va_base + self.mmu_conf.entries_per_table * self.chunk)
 
@@ -91,7 +93,7 @@ class Table:
                     +--------------------+
         """
         if num_chunks == 0:
-            logging.debug(margin + f"floating region, dispatching to next-level table")
+            self.logger.debug(margin + f"floating region, dispatching to next-level table")
             self.prepare_next(start_idx)
             self.entries[start_idx].map(region)
             return
@@ -112,7 +114,7 @@ class Table:
         """
         underflow = region.va % self.chunk
         if underflow:
-            logging.debug(margin + f"{underflow=}, dispatching to next-level table")
+            self.logger.debug(margin + f"{underflow=}, dispatching to next-level table")
             delta = self.chunk - underflow
             self.prepare_next(start_idx)
             self.entries[start_idx].map(region.copy(size = delta))
@@ -137,7 +139,7 @@ class Table:
         """
         overflow = end_va % self.chunk
         if overflow:
-            logging.debug(margin + f"{overflow=}, dispatching to next-level table")
+            self.logger.debug(margin + f"{overflow=}, dispatching to next-level table")
             final_idx = (end_va >> entry_idx_shift) & self.mmu_conf.table_idx_mask
             va_base = (end_va // self.chunk) * self.chunk
             pa_base = end_pa - (end_va - va_base)
@@ -154,7 +156,7 @@ class Table:
         can_split = ((self.level >= can_split_level_min) and self.level < 3) and (not self.pgt_conf.large_page)
         num_contiguous_blocks = 0
         for i in range(start_idx, start_idx + num_chunks):
-            logging.debug(margin + f"mapping complete chunk at index {i}")
+            self.logger.debug(margin + f"mapping complete chunk at index {i}")
             va_base = self.va_base + i * self.chunk
             pa_base = region.pa + (i - start_idx) * self.chunk
             r = region.copy(va=va_base, pa=pa_base)
