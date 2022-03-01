@@ -127,7 +127,7 @@ class CodeGen:
         page_mem_fd.seek(entry_offset)
         if type(entry) is Region:
             for idx in range(entry_idx, entry_idx + entry.num_contig):
-                addr = entry.pa + idx * table.chunk + int(self.mmu_conf.entry_template(entry.mem_type, entry.mem_attr, entry.is_page), base=16)
+                addr = entry.pa + (idx - entry_idx) * table.chunk + int(self.mmu_conf.entry_template(entry.mem_type, entry.mem_attr, entry.is_page), base=16)
                 data = pack("<Q", addr)
                 page_mem_fd.write(data)
 
