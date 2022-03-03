@@ -1,6 +1,7 @@
 #ifndef PLATFORM_H
 #define PLATFORM_H
 
+#define PLATFORM_HEAP_SIZE  (1 << 22)
 #define PLATFORM_STACK_SIZE (1 << 12)
 #define PLATFORM_CORE_COUNT (2)
 

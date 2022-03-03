@@ -61,6 +61,13 @@ SECTIONS {
 		*(COMMON)
 		__BSS_END__ = .;
 	} >NOBITS
+
+    . = ALIGN(0x1000);
+	.heap (NOLOAD) : {
+		__HEAP_START__ = .;
+		*(heap)
+		__HEAP_END__ = .;
+	} >NOBITS
     __NOBITS_END__ = .;
 
     __END__ = .;

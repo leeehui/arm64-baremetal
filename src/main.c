@@ -1,13 +1,10 @@
-
-volatile unsigned int * const UART0DR = (unsigned int *) 0x09000000;
- 
-void print_uart0(const char *s) {
-    while(*s != '\0') { 		/* Loop until end of string */
-         *UART0DR = (unsigned int)(*s); /* Transmit char */
-          s++;			        /* Next char */
-    }
-}
+#include <utils.h>
+#include <malloc.h>
+#include <heapblock.h>
  
 void main(void) {
-     print_uart0("Hello world!\n");
+    //void *addr = malloc(0x100);
+    //printf("Hello world! addr: %p\n", addr);
+    heapblock_init();
+    printf("Hello world!\n");
 }

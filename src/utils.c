@@ -1,0 +1,128 @@
+/* SPDX-License-Identifier: MIT */
+
+#include <assert.h>
+#include <stdarg.h>
+
+#include "utils.h"
+#include "types.h"
+#include "vsprintf.h"
+#include "uart.h"
+
+static char ascii(char s)
+{
+    if (s < 0x20)
+        return '.';
+    if (s > 0x7E)
+        return '.';
+    return s;
+}
+
+void hexdump(const void *d, size_t len)
+{
+    u8 *data;
+    size_t i, off;
+    data = (u8 *)d;
+    for (off = 0; off < len; off += 16) {
+        printf("%08lx  ", off);
+        for (i = 0; i < 16; i++) {
+            if ((i + off) >= len)
+                printf("   ");
+            else
+                printf("%02x ", data[off + i]);
+        }
+
+        printf(" ");
+        for (i = 0; i < 16; i++) {
+            if ((i + off) >= len)
+                printf(" ");
+            else
+                printf("%c", ascii(data[off + i]));
+        }
+        printf("\n");
+    }
+}
+
+void regdump(u64 addr, size_t len)
+{
+    u64 i, off;
+    for (off = 0; off < len; off += 32) {
+        printf("%016lx  ", addr + off);
+        for (i = 0; i < 32; i += 4) {
+            printf("%08x ", read32(addr + off + i));
+        }
+        printf("\n");
+    }
+}
+
+int snprintf(char *buffer, size_t size, const char *fmt, ...)
+{
+    va_list args;
+    int i;
+
+    va_start(args, fmt);
+    i = vsnprintf(buffer, size, fmt, args);
+    va_end(args);
+    return i;
+}
+
+int debug_printf(const char *fmt, ...)
+{
+    va_list args;
+    char buffer[512];
+    int i;
+
+    va_start(args, fmt);
+    i = vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+
+    uart_write(buffer, min(i, (int)(sizeof(buffer) - 1)));
+
+    return i;
+}
+
+void __assert_fail(const char *assertion, const char *file, unsigned int line, const char *function)
+{
+    printf("Assertion failed: '%s' on %s:%d:%s\n", assertion, file, line, function);
+}
+
+void udelay(u32 d)
+{
+    u64 delay = ((u64)d) * mrs(CNTFRQ_EL0) / 1000000;
+    u64 val = mrs(CNTPCT_EL0);
+    while ((mrs(CNTPCT_EL0) - val) < delay)
+        ;
+    sysop("isb");
+}
+
+void spin_init(spinlock_t *lock)
+{
+    lock->lock = -1;
+    lock->count = 0;
+}
+
+void spin_lock(spinlock_t *lock)
+{
+    s64 me = 0; //smp_id();
+    if (__atomic_load_n(&lock->lock, __ATOMIC_ACQUIRE) == me) {
+        lock->count++;
+        return;
+    }
+
+    s64 free = -1;
+
+    while (!__atomic_compare_exchange_n(&lock->lock, &free, me, false, __ATOMIC_ACQUIRE,
+                                        __ATOMIC_RELAXED))
+        free = -1;
+
+    assert(__atomic_load_n(&lock->lock, __ATOMIC_RELAXED) == me);
+    lock->count++;
+}
+
+void spin_unlock(spinlock_t *lock)
+{
+    s64 me = 0; //smp_id();
+    assert(__atomic_load_n(&lock->lock, __ATOMIC_RELAXED) == me);
+    assert(lock->count > 0);
+    if (!--lock->count)
+        __atomic_store_n(&lock->lock, -1L, __ATOMIC_RELEASE);
+}

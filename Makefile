@@ -7,8 +7,9 @@ DEP_DIR := $(BUILD_DIR)/.deps
 SRC_DIRS := src 
 
 # from atf log
-CFLAGS	:= -nostdinc -Werror -Wall -Wmissing-include-dirs -Wunused -Wdisabled-optimization -Wvla -Wshadow \
-		   -Wno-unused-parameter -Wredundant-decls -Wunused-but-set-variable -Wmaybe-uninitialized \
+# -Wredundant-decls -Wshadow 
+CFLAGS	:= -nostdinc -Werror -Wall -Wmissing-include-dirs -Wunused -Wdisabled-optimization -Wvla \
+		   -Wno-unused-parameter -Wunused-but-set-variable -Wmaybe-uninitialized \
 		   -Wpacked-bitfield-compat -Wshift-overflow=2 -Wlogical-op -Wno-error=deprecated-declarations \
 		   -Wno-error=cpp -march=armv8-a -mgeneral-regs-only -mstrict-align \
 		   -ffunction-sections -fdata-sections -ffreestanding -fno-builtin -fno-common -Os -std=gnu99 -fno-stack-protector 
@@ -19,13 +20,26 @@ CC := $(CROSS_COMPILE)gcc
 AS := $(CROSS_COMPILE)gcc
 LD := $(CROSS_COMPILE)ld
 OBJCOPY := $(CROSS_COMPILE)objcopy
+OBJDUMP := $(CROSS_COMPILE)objdump
 
 # recursive wildcard
 rwildcard=$(foreach d,$(wildcard $(addsuffix *,$(1))),$(call rwildcard,$(d)/,$(2))$(filter $(subst *,%,$(2)),$(d)))
 
-INC_DIRS := include
+USER_INC_DIRS := include src
 #INC_DIRS += `find . -type f -name '*.h' | sed -r 's|/[^/]+$||' |sort |uniq`
-CFLAGS += $(patsubst %, -I%, $(INC_DIRS))
+CFLAGS += $(patsubst %, -I%, $(USER_INC_DIRS))
+
+# specify path of std headers we override(only contains essential implementations)
+STDLIBC_INC_DIRS := sysinc
+CFLAGS += $(patsubst %, -isystem %, $(STDLIBC_INC_DIRS))
+
+# we do not use standard library which usually means the standard libc
+# but still we need compiler level headers, e.g. stddef.h stdargs.h stdint.h ...
+# as previous cflag "-nostdinc" tells gcc ONLY search dirs specified by -I -isystem -iqoute
+# the following shell command print full path of a library call "include" which contains
+# the compiler level headers 
+COMPILER_INC_DIRS := $(shell $(CC) -print-file-name=include)
+CFLAGS += $(patsubst %, -isystem %, $(COMPILER_INC_DIRS))
 
 ALL_C_SRCS += $(call rwildcard,$(SRC_DIRS),*.c)
 ALL_S_SRCS += $(call rwildcard,$(SRC_DIRS),*.S)
