@@ -4,4 +4,5 @@
 func startup
     bl plat_set_my_stack
     bl main
-endfuc startup
+endfunc startup
+

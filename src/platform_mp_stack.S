@@ -4,10 +4,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <platform.h>
 #include <asm_macros_common.S>
 
-#define PLATFORM_STACK_SIZE (1 << 12)
-#define PLATFORM_CORE_COUNT (2)
 
 	.local	platform_normal_stacks
 	.weak	plat_get_my_stack
