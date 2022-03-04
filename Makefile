@@ -5,6 +5,7 @@ BUILD_DIR := build
 LD_FILE := $(BUILD_DIR)/$(TARGET).ld
 DEP_DIR := $(BUILD_DIR)/.deps
 SRC_DIRS := src 
+DEBUG	:= 1
 
 # from atf log
 # -Wredundant-decls -Wshadow 
@@ -21,6 +22,7 @@ AS := $(CROSS_COMPILE)gcc
 LD := $(CROSS_COMPILE)ld
 OBJCOPY := $(CROSS_COMPILE)objcopy
 OBJDUMP := $(CROSS_COMPILE)objdump
+READELF := $(CROSS_COMPILE)readelf
 
 # recursive wildcard
 rwildcard=$(foreach d,$(wildcard $(addsuffix *,$(1))),$(call rwildcard,$(d)/,$(2))$(filter $(subst *,%,$(2)),$(d)))
@@ -41,11 +43,20 @@ CFLAGS += $(patsubst %, -isystem %, $(STDLIBC_INC_DIRS))
 COMPILER_INC_DIRS := $(shell $(CC) -print-file-name=include)
 CFLAGS += $(patsubst %, -isystem %, $(COMPILER_INC_DIRS))
 
+ifeq ($(DEBUG), 1)
+CFLAGS += -g
+endif
+
+
 ALL_C_SRCS += $(call rwildcard,$(SRC_DIRS),*.c)
 ALL_S_SRCS += $(call rwildcard,$(SRC_DIRS),*.S)
 ALL_OBJS += $(patsubst %.c, %.o, ${ALL_C_SRCS})
 ALL_OBJS += $(patsubst %.S, %.o, ${ALL_S_SRCS})
 BUILD_OBJS := $(patsubst %, $(BUILD_DIR)/%, ${ALL_OBJS})
+
+# phony targets
+.PHONY: all
+all: $(BUILD_DIR)/$(TARGET).asm
 
 ${BUILD_DIR}/%.o: %.S
 	@echo "  AS    $@"
@@ -63,13 +74,13 @@ $(BUILD_DIR)/$(TARGET).elf: $(BUILD_OBJS) $(LD_FILE)
 	@echo "  LD    $@"
 	@$(LD) $(LDFLAGS) -o $@ $(BUILD_OBJS)
 
+$(BUILD_DIR)/$(TARGET).asm: $(BUILD_DIR)/$(TARGET).elf
+	@echo "  CP    $@"
+	@$(OBJDUMP) -D $< > $@
+
 $(LD_FILE): $(TARGET).ld.S
 	@echo "  PP    $@"
 	@$(CC) -E $(CFLAGS) -x c $< | grep -v '^#' > $@
-
-# phony targets
-.PHONY: all
-all: $(BUILD_DIR)/$(TARGET).elf
 
 .PHONY: clean
 clean: 
