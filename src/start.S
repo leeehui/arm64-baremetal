@@ -7,7 +7,6 @@ func startup
     bl main
 endfunc startup
 
-
 vector_base runtime_excetions
 	/* ---------------------------------------------------------------------
 	 * Current EL with SP_EL0 : 0x0 - 0x200
@@ -34,19 +33,18 @@ end_vector_entry    serror_sp_el0
 	 * ---------------------------------------------------------------------
 	 */
 vector_entry        sync_sp_elx
-    b .
 end_vector_entry    sync_sp_elx
 
 vector_entry        irq_sp_elx
-    b .
+    b irq_spx
 end_vector_entry    irq_sp_elx
 
 vector_entry        fiq_sp_elx
-    b .
+    b fiq_spx
 end_vector_entry    fiq_sp_elx
 
 vector_entry        serror_sp_elx
-    b .
+    b serror_spx
 end_vector_entry    serror_sp_elx
 
 	/* ---------------------------------------------------------------------
@@ -54,19 +52,19 @@ end_vector_entry    serror_sp_elx
 	 * ---------------------------------------------------------------------
 	 */
 vector_entry        sync_aarch64
-    b .
+    b sync_spx
 end_vector_entry    sync_aarch64
 
 vector_entry        irq_aarch64
-    b .
+    b irq_spx
 end_vector_entry    irq_aarch64
 
 vector_entry        fiq_aarch64
-    b .
+    b fiq_spx
 end_vector_entry    fiq_aarch64
 
 vector_entry        serror_aarch64
-    b .
+    b serror_spx
 end_vector_entry    serror_aarch64
 
 	/* ---------------------------------------------------------------------

@@ -15,7 +15,7 @@ CFLAGS	:= -nostdinc -Werror -Wall -Wmissing-include-dirs -Wunused -Wdisabled-opt
 		   -Wno-error=cpp -march=armv8-a -mgeneral-regs-only -mstrict-align \
 		   -ffunction-sections -fdata-sections -ffreestanding -fno-builtin -fno-common -Os -std=gnu99 -fno-stack-protector 
 
-LDFLAGS	:= -T ${LD_FILE} --fatal-warnings --gc-sections
+LDFLAGS	:= -T $(LD_FILE) --fatal-warnings --gc-sections
 
 CC := $(CROSS_COMPILE)gcc
 AS := $(CROSS_COMPILE)gcc
@@ -50,21 +50,21 @@ endif
 
 ALL_C_SRCS += $(call rwildcard,$(SRC_DIRS),*.c)
 ALL_S_SRCS += $(call rwildcard,$(SRC_DIRS),*.S)
-ALL_OBJS += $(patsubst %.c, %.o, ${ALL_C_SRCS})
-ALL_OBJS += $(patsubst %.S, %.o, ${ALL_S_SRCS})
-BUILD_OBJS := $(patsubst %, $(BUILD_DIR)/%, ${ALL_OBJS})
+ALL_OBJS += $(patsubst %.c, %.o, $(ALL_C_SRCS))
+ALL_OBJS += $(patsubst %.S, %.o, $(ALL_S_SRCS))
+BUILD_OBJS := $(patsubst %, $(BUILD_DIR)/%, $(ALL_OBJS))
 
 # phony targets
 .PHONY: all
-all: $(BUILD_DIR)/$(TARGET).asm
+all: $(BUILD_DIR)/$(TARGET).bin $(BUILD_DIR)/$(TARGET).asm $(BUILD_DIR)/$(TARGET).info
 
-${BUILD_DIR}/%.o: %.S
+$(BUILD_DIR)/%.o: %.S
 	@echo "  AS    $@"
 	@mkdir -p $(DEP_DIR)
 	@mkdir -p "$(dir $@)"
 	@$(AS) -c $(CFLAGS) -MMD -MF $(DEP_DIR)/$(*F).d -MQ "$@" -MP -o $@ $<
 
-${BUILD_DIR}/%.o: %.c
+$(BUILD_DIR)/%.o: %.c
 	@echo "  CC    $@"
 	@mkdir -p $(DEP_DIR)
 	@mkdir -p "$(dir $@)"
@@ -74,9 +74,17 @@ $(BUILD_DIR)/$(TARGET).elf: $(BUILD_OBJS) $(LD_FILE)
 	@echo "  LD    $@"
 	@$(LD) $(LDFLAGS) -o $@ $(BUILD_OBJS)
 
+$(BUILD_DIR)/$(TARGET).bin: $(BUILD_DIR)/$(TARGET).elf
+	@echo "  CP    $@"
+	@$(OBJCOPY) -O binary --strip-debug $< $@
+
 $(BUILD_DIR)/$(TARGET).asm: $(BUILD_DIR)/$(TARGET).elf
 	@echo "  CP    $@"
 	@$(OBJDUMP) -D $< > $@
+
+$(BUILD_DIR)/$(TARGET).info: $(BUILD_DIR)/$(TARGET).elf
+	@echo "  CP    $@"
+	@$(READELF) -a $< > $@
 
 $(LD_FILE): $(TARGET).ld.S
 	@echo "  PP    $@"
