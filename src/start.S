@@ -1,13 +1,14 @@
 #include <asm_macros_common.S>
 
     .global startup
-    .global runtime_excetions
+    .global sync_sp_el0
+    .global runtime_exceptions
 func startup
     bl plat_set_my_stack
     bl main
 endfunc startup
 
-vector_base runtime_excetions
+vector_base runtime_exceptions
 	/* ---------------------------------------------------------------------
 	 * Current EL with SP_EL0 : 0x0 - 0x200
 	 * ---------------------------------------------------------------------
@@ -33,6 +34,7 @@ end_vector_entry    serror_sp_el0
 	 * ---------------------------------------------------------------------
 	 */
 vector_entry        sync_sp_elx
+    b sync_spx
 end_vector_entry    sync_sp_elx
 
 vector_entry        irq_sp_elx
