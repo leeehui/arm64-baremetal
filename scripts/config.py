@@ -61,7 +61,7 @@ class PgtConfig:
         return int(qty) * 1024 ** ("KMGT".find(unit) + 1)
 
     def parse_attr(self, s):
-        if re.match(r"(?!!?w!?x!?s)", s):
+        if re.match(r"(^!?w!?x!?s$)", s):
             self.logger.error(f"bad memory attr {s}")
             sys.exit(errno.EINVAL)
         # force enable EL0 access
