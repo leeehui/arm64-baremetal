@@ -1,5 +1,5 @@
 # target macros
-CROSS_COMPILE := aarch64-none-linux-gnu-
+CROSS_COMPILE := aarch64-linux-gnu-
 TARGET := test# FILL: target filename
 BUILD_DIR := build
 LD_FILE := $(BUILD_DIR)/$(TARGET).ld
@@ -15,7 +15,7 @@ CFLAGS	:= -nostdinc -Werror -Wall -Wmissing-include-dirs -Wunused -Wdisabled-opt
 		   -Wno-error=cpp -march=armv8-a -mgeneral-regs-only -mstrict-align \
 		   -ffunction-sections -fdata-sections -ffreestanding -fno-builtin -fno-common -Os -std=gnu99 -fno-stack-protector 
 
-LDFLAGS	:= -T $(LD_FILE) --fatal-warnings --gc-sections
+LDFLAGS	:= -T $(LD_FILE) --no-warn-rwx-segments --fatal-warnings --gc-sections
 
 CC := $(CROSS_COMPILE)gcc
 AS := $(CROSS_COMPILE)gcc
